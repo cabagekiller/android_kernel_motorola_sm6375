@@ -102,7 +102,8 @@ jobs:
         WORKSPACE_FOLDER="${{ steps.workspace.outputs.workspace-folder }}"
         cd "$WORKSPACE_FOLDER"
         git clone --depth=1 ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} kernel_tree
-        echo "kernel-folder=$(pwd)/kernel_tree" >> $GITHUB_OUTPUT
+        KERNEL_FOLDER="$WORKSPACE_FOLDER/kernel_tree"
+        echo "kernel-folder=$KERNEL_FOLDER" >> $GITHUB_OUTPUT
         git clone https://gitlab.com/simonpunk/susfs4ksu.git -b kernel-5.4 susfs4ksu
         git clone https://github.com/WildPlusKernel/kernel_patches.git kernel_patches
         git clone https://github.com/cabagekiller/Non-GKI-Patches.git patches_repo
@@ -117,7 +118,6 @@ jobs:
         # Copy SUSFS files
         cp "$WORKSPACE_FOLDER/susfs4ksu/kernel_patches/fs/*" ./fs/
         cp "$WORKSPACE_FOLDER/susfs4ksu/kernel_patches/include/linux/*" ./include/linux/
-
         # Setup KernelSU-Next
         echo "--- Setting up KernelSU-Next ---"
         rm -rf KernelSU-Next
@@ -225,11 +225,12 @@ jobs:
       id: prepare_anykernel
       run: |
           set -e
-          KERNEL_FOLDER="${{ github.event.inputs.KERNEL_FOLDER }}"
+          KERNEL_FOLDER="${{ steps.kernel.outputs.kernel-folder }}"
           ANYKERNEL_URL="${{ github.event.inputs.ANYKERNEL_URL }}"
           ANYKERNEL_BRANCH="${{ github.event.inputs.ANYKERNEL_BRANCH }}"
           ZIP_NAME_PREFIX="${{ github.event.inputs.ZIP_NAME_PREFIX }}"
-          cd "$KERNEL_FOLDER/out/arch/arm64/boot/"
+          OUT_DIR="$KERNEL_FOLDER/out/arch/arm64/boot/"
+          cd "$OUT_DIR"
           # Function to handle AnyKernel creation
           handle_anykernel() {
             local ak_url="$1"
@@ -258,27 +259,39 @@ jobs:
               cd "$ak_folder_name"
               zip -q -r "../$zip_name" *
               cd ..
-              echo "ZIP_PATH=$zip_name" >> $GITHUB_OUTPUT  # Use relative path
+              echo "$zip_output_var=$zip_name" >> $GITHUB_OUTPUT
               echo "Created $zip_name"
             else
               echo "Skipping $ak_name_prefix AnyKernel (URL not provided)."
-              echo "ZIP_PATH=" >> $GITHUB_OUTPUT # Set to empty string
+              echo "$zip_output_var=" >> $GITHUB_OUTPUT # Set to empty string
             fi
           }
           # Ensure variables are exported
           export -f handle_anykernel
           # Call the function for each AnyKernel.  The output is stored as the zip file name for later.
           handle_anykernel "$ANYKERNEL_URL" "$ANYKERNEL_BRANCH" "${ZIP_NAME_PREFIX}-AOSP" "anykernel_zipname"
-          handle_anykernel "$ANYKERNEL_URL" "$ANYKERNEL_BRANCH" "${ZIP_NAME_PREFIX}-HYPEROS" "second_anykernel_zipname"
-          # Set both zip paths to be uploaded.  If the URL is not provided, the variable will be empty
-          echo "ZIP_PATHS=$anykernel_zipname $second_anykernel_zipname" >> $GITHUB_OUTPUT
-          echo "::set-output name=ZIP_PATHS::$anykernel_zipname $second_anykernel_zipname"
+          handle_anykernel "${{ github.event.inputs.SECOND_ANYKERNEL_URL }}" "$ANYKERNEL_BRANCH" "${ZIP_NAME_PREFIX}-HYPEROS" "second_anykernel_zipname"
+
+          # Construct the ZIP_PATHS output
+          ZIP_PATHS=""
+          if [[ -n "${{ env.anykernel_zipname }}" ]]; then
+              ZIP_PATHS="${{ env.anykernel_zipname }}"
+          fi
+          if [[ -n "${{ env.second_anykernel_zipname }}" ]]; then
+              if [[ -n "$ZIP_PATHS" ]]; then
+                  ZIP_PATHS="$ZIP_PATHS ${{ env.second_anykernel_zipname }}"
+              else
+                  ZIP_PATHS="${{ env.second_anykernel_zipname }}"
+              fi
+          fi
+          echo "ZIP_PATHS=$ZIP_PATHS" >> $GITHUB_OUTPUT
+          echo "::set-output name=ZIP_PATHS::$ZIP_PATHS"
+
     - name: Upload to Release
+      if: ${{ github.event.inputs.UPLOAD_TO_RELEASE == 'true' && steps.prepare_anykernel.outputs.ZIP_PATHS != '' }}
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.anykernel_zipname }}
-          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.second_anykernel_zipname }}
+        files: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.prepare_anykernel.outputs.ZIP_PATHS }}
         name: ${{ github.event.inputs.CODENAME }}-${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
