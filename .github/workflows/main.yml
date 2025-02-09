@@ -105,9 +105,11 @@ jobs:
         git clone --depth=1 "${{ github.event.inputs.KERNEL_TREE }}" -b "${{ github.event.inputs.KERNEL_TREE_BRANCH }}" kernel_tree
         KERNEL_FOLDER="$WORKSPACE_FOLDER/kernel_tree"
         echo "kernel-folder=$KERNEL_FOLDER" >> $GITHUB_OUTPUT
+        pwd
         git clone https://gitlab.com/simonpunk/susfs4ksu.git -b kernel-5.4 susfs4ksu
         git clone https://github.com/WildPlusKernel/kernel_patches.git kernel_patches
         git clone https://github.com/cabagekiller/Non-GKI-Patches.git patches_repo
+        ls
         cd kernel_tree
         mkdir -p common/fs common/include/linux
     - name: Apply KernelSU, SUSFS, and Other Patches
