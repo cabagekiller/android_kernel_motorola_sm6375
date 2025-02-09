@@ -101,6 +101,7 @@ jobs:
         set -e
         WORKSPACE_FOLDER="${{ steps.workspace.outputs.workspace-folder }}"
         cd "$WORKSPACE_FOLDER"
+        pwd
         git clone --depth=1 "${{ github.event.inputs.KERNEL_TREE }}" -b "${{ github.event.inputs.KERNEL_TREE_BRANCH }}" kernel_tree
         KERNEL_FOLDER="$WORKSPACE_FOLDER/kernel_tree"
         echo "kernel-folder=$KERNEL_FOLDER" >> $GITHUB_OUTPUT
@@ -115,6 +116,7 @@ jobs:
         KERNEL_FOLDER="${{ steps.kernel.outputs.kernel-folder }}"
         WORKSPACE_FOLDER="${{ steps.workspace.outputs.workspace-folder }}"
         cd "$KERNEL_FOLDER"
+        pwd
         # Copy SUSFS files
         cp "$WORKSPACE_FOLDER/susfs4ksu/kernel_patches/fs/*" ./fs/
         cp "$WORKSPACE_FOLDER/susfs4ksu/kernel_patches/include/linux/*" ./include/linux/
