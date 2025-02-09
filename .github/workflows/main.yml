@@ -30,7 +30,7 @@ on:
       ANYKERNEL_BRANCH:
         description: 'AnyKernel3 Git Branch'
         required: false
-        default: 'android-5.4'  # Corrected branch name
+        default: 'android-5.4'
       UPLOAD_TO_RELEASE:
         description: 'Upload to release'
         type: boolean
@@ -101,7 +101,7 @@ jobs:
         set -e
         WORKSPACE_FOLDER="${{ steps.workspace.outputs.workspace-folder }}"
         cd "$WORKSPACE_FOLDER"
-        git clone --depth=1 ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} kernel_tree
+        git clone --depth=1 "${{ github.event.inputs.KERNEL_TREE }}" -b "${{ github.event.inputs.KERNEL_TREE_BRANCH }}" kernel_tree
         KERNEL_FOLDER="$WORKSPACE_FOLDER/kernel_tree"
         echo "kernel-folder=$KERNEL_FOLDER" >> $GITHUB_OUTPUT
         git clone https://gitlab.com/simonpunk/susfs4ksu.git -b kernel-5.4 susfs4ksu
@@ -223,6 +223,7 @@ jobs:
 
     - name: Prepare AnyKernel3 Zips
       id: prepare_anykernel
+      shell: bash
       run: |
           set -e
           KERNEL_FOLDER="${{ steps.kernel.outputs.kernel-folder }}"
@@ -230,6 +231,8 @@ jobs:
           ANYKERNEL_BRANCH="${{ github.event.inputs.ANYKERNEL_BRANCH }}"
           ZIP_NAME_PREFIX="${{ github.event.inputs.ZIP_NAME_PREFIX }}"
           OUT_DIR="$KERNEL_FOLDER/out/arch/arm64/boot/"
+          AK_TEMP_DIR="$KERNEL_FOLDER/ak_temp"  # Temporary directory
+          mkdir -p "$AK_TEMP_DIR"
           cd "$OUT_DIR"
           # Function to handle AnyKernel creation
           handle_anykernel() {
@@ -238,53 +241,58 @@ jobs:
             local ak_name_prefix="$3"
             local zip_output_var="$4"
             if [[ -n "$ak_url" ]]; then
-              local ak_branch_final="${ak_branch:-munch}"
-              local ak_folder_name="${ak_name_prefix}-AnyKernel"
-              local zip_name="${ak_name_prefix}-KSUNEXT-SUSFS-munch.zip"
+              local ak_branch_final="${ak_branch:-android-5.4}" # use this as default
+              local ak_folder_name="$AK_TEMP_DIR/${ak_name_prefix}-AnyKernel" # use temp dir to prevent issues
+              local zip_name="${ak_name_prefix}-KSUNEXT-SUSFS.zip"  # No -munch here
+
               echo "Cloning AnyKernel3: $ak_url, branch: $ak_branch_final to $ak_folder_name"
               git clone --recursive --depth=1 -b "$ak_branch_final" "$ak_url" "$ak_folder_name"
+
               # Copy Kernel files.
               echo "Copying kernel files to AnyKernel directory"
               cp -f Image.gz "$ak_folder_name/" || echo "Image.gz not found."
+
               if [ -f dtb.img ]; then
                 mkdir -p "$ak_folder_name/dtb"
                 mv -f dtb.img "$ak_folder_name/dtb/dtb"
               elif [ -d dtb ]; then
-                 mv -f dtb "$ak_folder_name/"
+                mv -f dtb "$ak_folder_name/"
               else
                 echo "No dtb.img or dtb directory found"
               fi
-              cp -f dtbo.img "$ak_folder_name/"  || echo "dtbo.img not found."
+              cp -f dtbo.img "$ak_folder_name/" || echo "dtbo.img not found."
+
               echo "Creating zip file: $zip_name"
               cd "$ak_folder_name"
-              zip -q -r "../$zip_name" *
+              zip -q -r "$OUT_DIR/$zip_name" * # VERY IMPORTANT: Full path to zip!
               cd ..
-              echo "$zip_output_var=$zip_name" >> $GITHUB_OUTPUT
+              echo "$zip_output_var=$zip_name" >> "$GITHUB_OUTPUT" # Quote it for safety
+
               echo "Created $zip_name"
+              rm -rf "$ak_folder_name" # cleanup after creation
             else
               echo "Skipping $ak_name_prefix AnyKernel (URL not provided)."
-              echo "$zip_output_var=" >> $GITHUB_OUTPUT # Set to empty string
+              echo "$zip_output_var=" >> "$GITHUB_OUTPUT" # Quote it for safety. Set to empty string
             fi
           }
+
           # Ensure variables are exported
           export -f handle_anykernel
-          # Call the function for each AnyKernel.  The output is stored as the zip file name for later.
+
+          # Call the function for each AnyKernel. The output is stored as the zip file name for later.
           handle_anykernel "$ANYKERNEL_URL" "$ANYKERNEL_BRANCH" "${ZIP_NAME_PREFIX}-AOSP" "anykernel_zipname"
           handle_anykernel "${{ github.event.inputs.SECOND_ANYKERNEL_URL }}" "$ANYKERNEL_BRANCH" "${ZIP_NAME_PREFIX}-HYPEROS" "second_anykernel_zipname"
 
           # Construct the ZIP_PATHS output
           ZIP_PATHS=""
           if [[ -n "${{ env.anykernel_zipname }}" ]]; then
-              ZIP_PATHS="${{ env.anykernel_zipname }}"
+              ZIP_PATHS="${ZIP_PATHS} ${{ env.anykernel_zipname }}"
           fi
           if [[ -n "${{ env.second_anykernel_zipname }}" ]]; then
-              if [[ -n "$ZIP_PATHS" ]]; then
-                  ZIP_PATHS="$ZIP_PATHS ${{ env.second_anykernel_zipname }}"
-              else
-                  ZIP_PATHS="${{ env.second_anykernel_zipname }}"
-              fi
+              ZIP_PATHS="${ZIP_PATHS} ${{ env.second_anykernel_zipname }}"
           fi
-          echo "ZIP_PATHS=$ZIP_PATHS" >> $GITHUB_OUTPUT
+          ZIP_PATHS=$(echo "$ZIP_PATHS" | tr -s ' ') # Remove leading/trailing spaces, squeeze multiple spaces
+          echo "ZIP_PATHS=$ZIP_PATHS" >> "$GITHUB_OUTPUT"
           echo "::set-output name=ZIP_PATHS::$ZIP_PATHS"
 
     - name: Upload to Release
@@ -316,6 +324,4 @@ jobs:
       with:
         name: AnyKernel-Artifacts
         path: |
-          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/*AnyKernel*/
-          !${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/*AnyKernel*/.git
-          !${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/*KSUNEXT-SUSFS.zip
