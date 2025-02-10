@@ -238,7 +238,7 @@ jobs:
         export PATH="$PATH:/usr/local/bin"
         mkdir -p artifacts
         make O=out ARCH=arm64 vendor/gki_defconfig V=1 || { echo "Defconfig failed!"; exit 1; } # Error handling
-        make O=out CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all) -l$(nproc --all) CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 || { echo "Kernel build failed!"; exit 1; } # Error handling and load limiting
+        make O=out CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all) -l$(nproc --all) CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 V=1 || { echo "Kernel build failed!"; exit 1; } # Error handling and load limiting
         BUILD_END_TIME=$(date +%s)
         BUILD_ELAPSED_TIME=$((BUILD_END_TIME - BUILD_START_TIME))
         echo "elapsed_time=$BUILD_ELAPSED_TIME" >> $GITHUB_OUTPUT
