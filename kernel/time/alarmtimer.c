@@ -60,7 +60,7 @@ static struct wakeup_source *ws;
 /* rtc timer and device for setting alarm wakeups at suspend */
 static struct rtc_timer		rtctimer;
 static struct rtc_device	*rtcdev;
-static int alarm_debug = 0;
+static int __attribute__((used)) alarm_debug = 0; // Modified line
 static DEFINE_SPINLOCK(rtcdev_lock);
 
 /**
