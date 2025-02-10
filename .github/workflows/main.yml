@@ -73,10 +73,8 @@ jobs:
         sudo apt-get install -y python3-pip git zip unzip gcc g++ make ninja-build file bc bison flex libfl-dev libssl-dev libelf-dev wget build-essential python3-dev python3-setuptools rsync ccache llvm-dev flex libncurses6
 
         # Install necessary packages for mkdtimg (often part of device-tree-compiler)
-        sudo apt-get install -y device-tree-compiler llvm-dev flex libncurses6 dtc libfdt-dev
+        sudo apt-get install -y device-tree-compiler llvm-dev flex libncurses6 libfdt-dev
         echo "PATH: $PATH"  # Print the PATH
-    - name: Check mkdtimg installation
-      run: which mkdtimg
     - name: Cache Clang
       uses: actions/cache@v4
       id: cache-clang
