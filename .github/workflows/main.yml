@@ -83,6 +83,7 @@ jobs:
 
           wget https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils.tar.gz -O utils.tar.gz
           tar -xf utils.tar.gz
+          ls -l libufdt-refs_heads_main-utils/
 
           cd libufdt-refs_heads_main-utils/src # Go into the directory where mkdtimg is located
           make
