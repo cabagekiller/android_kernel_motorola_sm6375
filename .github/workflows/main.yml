@@ -11,7 +11,7 @@ on:
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
         required: true
-        default: '15.0'
+        default: '15.0-KSU'
       CODENAME:
         description: 'Phone Codename'
         default: 'miami'
