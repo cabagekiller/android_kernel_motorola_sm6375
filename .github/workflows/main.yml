@@ -235,7 +235,7 @@ jobs:
         export KBUILD_BUILD_USER="cabagekiller"
         export KBUILD_BUILD_HOST="Github"
         export PATH="$TOOLS_FOLDER/clang/bin:$PATH"  # Clang in path
-        export PATH="$PATH:/usr/local/bin
+        export PATH="$PATH:/usr/local/bin"
         mkdir -p artifacts
         make O=out ARCH=arm64 vendor/gki_defconfig V=1 || { echo "Defconfig failed!"; exit 1; } # Error handling
         make O=out CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all) -l$(nproc --all) CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 || { echo "Kernel build failed!"; exit 1; } # Error handling and load limiting
