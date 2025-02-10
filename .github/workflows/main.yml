@@ -70,7 +70,12 @@ jobs:
         echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
         echo "build_title=${{ github.event.inputs.BUILD_TITLE || github.event.inputs.CODENAME }}" >> $GITHUB_OUTPUT
         sudo apt-get update -y -qq
-        sudo apt-get install -y --no-install-recommends python3-pip git zip unzip gcc g++ make ninja-build file bc bison flex libfl-dev libssl-dev libelf-dev wget build-essential python3-dev python3-setuptools rsync ccache llvm-dev flex libncurses6
+        sudo apt-get install -y python3-pip git zip unzip gcc g++ make ninja-build file bc bison flex libfl-dev libssl-dev libelf-dev wget build-essential python3-dev python3-setuptools rsync ccache llvm-dev flex libncurses6
+
+        # Install necessary packages for mkdtimg (often part of device-tree-compiler)
+        sudo apt-get install -y device-tree-compiler llvm-dev flex libncurses6
+    - name: Check mkdtimg installation
+      run: which mkdtimg
     - name: Cache Clang
       uses: actions/cache@v4
       id: cache-clang
@@ -212,10 +217,11 @@ jobs:
         export SUBARCH=arm64
         export KBUILD_BUILD_USER="cabagekiller"
         export KBUILD_BUILD_HOST="Github"
-        export PATH="$TOOLS_FOLDER/clang/bin:$PATH"
+        export PATH="$TOOLS_FOLDER/clang/bin:$PATH"  # Clang in path
+        export PATH="$PATH:/usr/sbin" # Add /usr/sbin to path for mkdtimg
         mkdir -p artifacts
-        make O=out ARCH=arm64 vendor/gki_defconfig V=1
-        make O=out CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all) CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1
+        make O=out ARCH=arm64 vendor/gki_defconfig V=1 || { echo "Defconfig failed!"; exit 1; } # Error handling
+        make O=out CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all) -l$(nproc --all) CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 || { echo "Kernel build failed!"; exit 1; } # Error handling and load limiting
         BUILD_END_TIME=$(date +%s)
         BUILD_ELAPSED_TIME=$((BUILD_END_TIME - BUILD_START_TIME))
         echo "elapsed_time=$BUILD_ELAPSED_TIME" >> $GITHUB_OUTPUT
