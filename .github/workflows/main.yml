@@ -81,17 +81,16 @@ jobs:
           mkdir mkdtimg_build # Create a build directory
           cd mkdtimg_build
 
-          wget https://android.googlesource.com/platform/system/libufdt/+archive/refs/heads/main/utils.tar.gz -O utils.tar.gz
-          tar -xf utils.tar.gz
-          ls
+          git clone https://github.com/affggh/mkdtimg.git
+          cd mkdtimg
 
-          cd src # Go into the directory where mkdtimg is located
           make
 
           # Copy the mkdtimg executable to a location in your PATH
-          sudo cp mkdtimg /usr/local/bin  # /usr/sbin or other PATH directory
+          sudo cp mkdtimg /usr/local/bin
 
-          which mkdtimg # Verify it is in the PATH. If not, add the correct directory to the PATH
+          which mkdtimg
+
           cd ..
 
     - name: Cache Clang
