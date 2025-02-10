@@ -85,7 +85,7 @@ jobs:
           tar -xf utils.tar.gz
           ls
 
-          cd utils/src # Go into the directory where mkdtimg is located
+          cd /src # Go into the directory where mkdtimg is located
           make
 
           # Copy the mkdtimg executable to a location in your PATH
