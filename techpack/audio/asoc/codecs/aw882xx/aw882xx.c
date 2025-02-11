@@ -179,9 +179,9 @@ static int aw882xx_i2c_writes(struct aw882xx *aw882xx,
 	data[0] = reg_addr;
 	memcpy(&data[1], buf, len);
 
-	ret = i2c_master_send(aw882xx->i2c, data, len+1);
-	if (ret < 0)
-		pr_err("%s: i2c master send error\n", __func__);
+	ret = i2c_smbus_write_i2c_block_data(aw882xx->i2c, reg_addr, len, buf);
+    	if (ret < 0)
+        	pr_err("%s: i2c smbus write error\n", __func__);
 
 	kfree(data);
 
@@ -207,15 +207,13 @@ static int aw882xx_i2c_reads(struct aw882xx *aw882xx,
 			},
 	};
 
-	ret = i2c_transfer(aw882xx->i2c->adapter, msg, ARRAY_SIZE(msg));
-	if (ret < 0) {
-		pr_err("%s: i2c master send error, ret=%d\n",
-			__func__, ret);
-		return ret;
-	} else if (ret != AW882XX_I2C_READ_MSG_NUM) {
-		pr_err("%s: couldn't read registers, return %d bytes\n",
-			__func__, ret);
-		return -ENXIO;
+	ret = i2c_smbus_read_i2c_block_data(aw882xx->i2c, reg_addr, data_len, data_buf);
+    if (ret < 0) {
+        pr_err("%s: i2c smbus read error, ret=%d\n", __func__, ret);
+        return ret;
+    } else if (ret!= data_len) {
+        pr_err("%s: couldn't read registers, return %d bytes\n", __func__, ret);
+        return -ENXIO;
 	}
 
 	return 0;
@@ -3477,9 +3475,9 @@ static int aw882xx_i2c_probe(struct i2c_client *i2c,
 
 	pr_info("%s: enter\n", __func__);
 
-	if (!i2c_check_functionality(i2c->adapter, I2C_FUNC_I2C)) {
-		dev_err(&i2c->dev, "check_functionality failed\n");
-		return -EIO;
+	if (!i2c_adapter_has_capability(i2c->adapter, I2C_FUNC_I2C)) {
+            dev_err(&i2c->dev, "check_functionality failed\n");
+            return -EIO;
 	}
 
 	aw882xx = devm_kzalloc(&i2c->dev, sizeof(struct aw882xx), GFP_KERNEL);
@@ -3697,9 +3695,9 @@ static int __init aw882xx_i2c_init(void)
 
 	pr_info("%s: aw882xx driver version %s\n", __func__, AW882XX_VERSION);
 
-	ret = i2c_add_driver(&aw882xx_i2c_driver);
-	if (ret)
-		pr_err("%s: fail to add aw882xx device into i2c\n", __func__);
+	ret = i2c_register_driver(&aw882xx_i2c_driver);
+    	if (ret)
+            pr_err("%s: fail to add aw882xx device into i2c\n", __func__);
 
 	return ret;
 }
@@ -3713,7 +3711,7 @@ module_init(aw882xx_i2c_init);
 
 static void __exit aw882xx_i2c_exit(void)
 {
-	i2c_del_driver(&aw882xx_i2c_driver);
+	i2c_unregister_driver(&aw882xx_i2c_driver);
 }
 module_exit(aw882xx_i2c_exit);
 
