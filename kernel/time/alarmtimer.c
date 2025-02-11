@@ -60,7 +60,9 @@ static struct wakeup_source *ws;
 /* rtc timer and device for setting alarm wakeups at suspend */
 static struct rtc_timer		rtctimer;
 static struct rtc_device	*rtcdev;
-static int __attribute__((used)) alarm_debug = 0; // Modified line
+#ifdef CONFIG_ALARM_DEBUG
+static int __attribute__((used)) alarm_debug = 0;
+#endif
 static DEFINE_SPINLOCK(rtcdev_lock);
 
 /**
@@ -215,12 +217,14 @@ static enum hrtimer_restart alarmtimer_fired(struct hrtimer *timer)
 	spin_lock_irqsave(&base->lock, flags);
 	alarmtimer_dequeue(base, alarm);
 	spin_unlock_irqrestore(&base->lock, flags);
-
+	
+   #ifdef CONFIG_ALARM_DEBUG
 	if(alarm_debug & 0x1){
 		pr_info("%s: type=%d, func=%pf, exp:%llu\n", __func__,
 			alarm->type, alarm->function, ktime_to_ms(alarm->node.expires));
 		alarm_debug &= 0xFE;
 	}
+   #endif
 
 	if (alarm->function)
 		restart = alarm->function(alarm, base->gettime());
@@ -299,12 +303,17 @@ static int alarmtimer_suspend(struct device *dev)
 		return 0;
 
 	if (min_timer){
+#ifdef CONFIG_ALARM_DEBUG
+	alarm_debug = 0x1;
+	if (alarm_debug & 0x1) {
 		pr_info("%s: [%p]type=%d, func=%pf, exp:%llu\n", __func__,
 			min_timer, min_timer->type, min_timer->function,
 			ktime_to_ms(min_timer->node.expires));
-		min_timer = NULL;
+		}
+#endif
+	
 	}
-	alarm_debug = 0x1;
+	//alarm_debug = 0x1;
 
 	if (ktime_to_ns(min) < 2 * NSEC_PER_SEC) {
 		__pm_wakeup_event(ws, 2 * MSEC_PER_SEC);
