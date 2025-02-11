@@ -4640,7 +4640,6 @@ static int add_location(struct loc_track *t, struct kmem_cache *s,
 	struct location *l;
 	unsigned long caddr;
 	unsigned long age = jiffies - track->when;
-	unsigned int i = 0;
 
 	start = -1;
 	end = t->count;
@@ -6167,7 +6166,6 @@ static int alloc_trace_locations(struct seq_file *seq, struct kmem_cache *s,
 
 	for (i = 0; i < t.count; i++) {
 		struct location *l = &t.loc[i];
-		unsigned int j = 0;
 
 		seq_printf(seq,
 		"alloc_list: call_site=%pS count=%zu object_size=%zu slab_size=%zu slab_name=%s\n",
