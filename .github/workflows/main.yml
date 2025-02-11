@@ -196,6 +196,7 @@ jobs:
         CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
         CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         CONFIG_KSU_SUSFS_SUS_SU=y
+        CONFIG_ALARM_DEBUG=y
         EOF
         cat >> ./arch/arm64/configs/defconfig <<EOF
         CONFIG_KSU=y
@@ -215,6 +216,7 @@ jobs:
         CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
         CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         CONFIG_KSU_SUSFS_SUS_SU=y
+        CONFIG_ALARM_DEBUG=y
         EOF
     - name: Execute patches.sh - USING WORKING-DIRECTORY - REMOVED
       # This step isn't adding anything, as far as I can tell.  If you REALLY
